@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: guardrail_ops
+    ports:
+      - "5432:5432"
+    volumes:
+      - guardrail_db_data:/var/lib/postgresql/data
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./backend/src/db/seed.sql:/docker-entrypoint-initdb.d/2-seed.sql
+      - ./backend/src/db/migrations/001_security_events_indexes.sql:/docker-entrypoint-initdb.d/3-migration.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: guardrail_ops
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-replace_with_a_long_random_secret_at_least_32_chars}
+      JWT_EXPIRES_IN: 2h
+      JWT_ISSUER: guardrail-ops
+      JWT_AUDIENCE: guardbank-clients
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: gemini-2.0-flash
+      CORS_ORIGIN: http://localhost:5173
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 300
+      AUTH_RATE_LIMIT_MAX: 10
+      LOG_LEVEL: info
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:4000/api
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  guardrail_db_data:
