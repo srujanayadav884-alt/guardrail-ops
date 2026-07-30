@@ -1,56 +1,35 @@
 import { Pool } from "pg";
-import { env } from "./env";
+import dotenv from "dotenv";
 
-export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
+dotenv.config();
 
-async function initDb() {
+// Support both DATABASE_URL (Render Postgres) and individual DB variables
+const isProduction = process.env.NODE_ENV === "production";
+
+export const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: isProduction ? { rejectUnauthorized: false } : false,
+      }
+    : {
+        host: process.env.DB_HOST || "localhost",
+        port: Number(process.env.DB_PORT) || 5432,
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "postgres",
+        database: process.env.DB_NAME || "guardrail_ops",
+      }
+);
+
+// Export testConnection function so server.ts can verify DB connection on boot
+export const testConnection = async (): Promise<void> => {
   try {
-    console.log("Checking and initializing missing database tables...");
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS security_logs (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        event_type VARCHAR(100) NOT NULL,
-        severity VARCHAR(20) DEFAULT 'medium',
-        request_snippet TEXT,
-        details JSONB,
-        ip_address VARCHAR(45),
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS risk_scores (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        prompt_snippet TEXT,
-        risk_score NUMERIC(5, 2) DEFAULT 0.00,
-        threat_category VARCHAR(100) DEFAULT 'general',
-        action_taken VARCHAR(50) DEFAULT 'allowed',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS security_alerts (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        alert_type VARCHAR(100) NOT NULL,
-        severity VARCHAR(20) DEFAULT 'medium',
-        description TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    console.log("Database schema initialized successfully!");
+    const client = await pool.connect();
+    console.log("✅ Database connected successfully!");
+    client.release();
   } catch (err) {
-    console.error("Failed to initialize database schema:", err);
+    console.error("❌ Database connection error:", err);
   }
-}
+};
 
-// Auto-run schema initialization on app start
-initDb();
+export default pool;
