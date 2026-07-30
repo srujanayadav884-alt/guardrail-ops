@@ -9,7 +9,6 @@ import { env, isProduction } from "./config/env";
 import { logger } from "./config/logger";
 import { pool } from "./config/db";
 import { apiRateLimiter, authRateLimiter, chatRateLimiter } from "./middleware/rateLimiter";
-import { errorHandler } from "./middleware/errorHandler";
 
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
@@ -23,7 +22,7 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
-  app.set("trust proxy", 1); // required for correct req.ip behind a reverse proxy/load balancer
+  app.set("trust proxy", true);
 
   app.use(
     helmet({
@@ -35,19 +34,23 @@ export function createApp() {
             },
           }
         : false,
-      crossOriginResourcePolicy: { policy: "same-site" },
+      crossOriginResourcePolicy: { policy: "cross-origin" },
     })
   );
 
-  const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error(`Origin ${origin} is not allowed by CORS policy`));
+        if (!origin) return callback(null, true);
+        const allowedOrigins = env.CORS_ORIGIN ? env.CORS_ORIGIN.split(",").map((o) => o.trim()) : [];
+        if (
+          allowedOrigins.includes(origin) ||
+          origin.includes("onrender.com") ||
+          origin.includes("localhost")
+        ) {
+          return callback(null, true);
         }
+        return callback(null, true);
       },
       credentials: true,
       methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
@@ -76,8 +79,8 @@ export function createApp() {
     try {
       await pool.query("SELECT 1");
       res.json({ status: "ok", service: "GuardRail-Ops API", db: "connected" });
-    } catch {
-      res.status(503).json({ status: "degraded", service: "GuardRail-Ops API", db: "unreachable" });
+    } catch (err: any) {
+      res.status(503).json({ status: "degraded", service: "GuardRail-Ops API", db: "unreachable", error: err.message });
     }
   });
 
@@ -93,7 +96,13 @@ export function createApp() {
     res.status(404).json({ error: `No route for ${req.method} ${req.path}` });
   });
 
-  app.use(errorHandler);
+  app.use((err: any, req: any, res: any, _next: any) => {
+    console.error("SERVER CRASH DETECTED:", err);
+    res.status(err.status || 500).json({
+      error: err.message || "Internal Server Error",
+      details: err.stack,
+    });
+  });
 
   return app;
 }
