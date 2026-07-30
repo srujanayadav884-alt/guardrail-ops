@@ -2,11 +2,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-// Auth Pages (Named exports)
+// Auth Pages
 import { Login } from "./pages/auth/Login";
-import { AdminLogin } from "./pages/auth/AdminLogin";
+import AdminLogin from "./pages/auth/AdminLogin";
 
-// Pages
+// Admin / User Pages
 import Dashboard from "./pages/admin/Dashboard";
 
 export default function App() {
