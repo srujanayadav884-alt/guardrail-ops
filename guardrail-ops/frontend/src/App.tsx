@@ -1,13 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-// Auth Pages (Default Imports)
-import Login from "./pages/auth/Login";
-import AdminLogin from "./pages/auth/AdminLogin";
+// Auth Pages (Using named exports)
+import { Login } from "./pages/auth/Login";
+import { AdminLogin } from "./pages/auth/AdminLogin";
 
-// Protected Pages (Default Imports)
-import Dashboard from "./pages/admin/Dashboard";
+// Admin / User Pages
+import { Dashboard } from "./pages/admin/Dashboard";
 
 export default function App() {
   return (

@@ -1,5 +1,5 @@
 import axios from "axios";
-
+import streamChat from "../../api/client";
 // 1. Point directly to your active backend deployment on Render
 const API_BASE_URL = "https://guardrail-ops-1.onrender.com/api";
 
