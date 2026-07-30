@@ -1,7 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
-import { streamChat } from "../../api/client";
+import streamChat from "../../api/client";
 import { ChatMessage } from "../../types";
-
 export default function BankingAssistant() {
   const sessionId = useMemo(() => crypto.randomUUID(), []);
   const [messages, setMessages] = useState<ChatMessage[]>([
