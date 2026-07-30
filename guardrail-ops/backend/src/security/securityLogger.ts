@@ -9,10 +9,15 @@ export interface SecurityLogData {
   ipAddress?: string | null;
 }
 
-/**
- * Supports both object parameter style: writeSecurityLog({ userId, eventType, ... })
- * AND positional parameter style: writeSecurityLog(userId, eventType, severity, ...)
- */
+// Function Overloads to satisfy both single-object and positional argument calls
+export async function writeSecurityLog(data: SecurityLogData): Promise<void>;
+export async function writeSecurityLog(
+  userId: number | null,
+  eventType: string,
+  severity?: string,
+  details?: any,
+  ipAddress?: string | null
+): Promise<void>;
 export async function writeSecurityLog(...args: any[]): Promise<void> {
   try {
     let userId: number | null = null;
@@ -55,13 +60,27 @@ export async function writeSecurityLog(...args: any[]): Promise<void> {
   }
 }
 
-export async function writeRiskScore(data: any): Promise<void> {
+export async function writeRiskScore(...args: any[]): Promise<void> {
   try {
-    const userId = data.userId ?? null;
-    const promptSnippet = data.promptSnippet ?? null;
-    const riskScore = data.riskScore ?? 0;
-    const threatCategory = data.threatCategory || "general";
-    const actionTaken = data.actionTaken || "allowed";
+    let userId: number | null = null;
+    let promptSnippet: string | null = null;
+    let riskScore = 0;
+    let threatCategory = "general";
+    let actionTaken = "allowed";
+
+    if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+      userId = args[0].userId ?? null;
+      promptSnippet = args[0].promptSnippet ?? null;
+      riskScore = args[0].riskScore ?? 0;
+      threatCategory = args[0].threatCategory || "general";
+      actionTaken = args[0].actionTaken || "allowed";
+    } else {
+      userId = typeof args[0] === "number" ? args[0] : null;
+      promptSnippet = args[1] || null;
+      riskScore = args[2] || 0;
+      threatCategory = args[3] || "general";
+      actionTaken = args[4] || "allowed";
+    }
 
     await pool.query(
       `INSERT INTO risk_scores (user_id, prompt_snippet, risk_score, threat_category, action_taken)
@@ -73,12 +92,24 @@ export async function writeRiskScore(data: any): Promise<void> {
   }
 }
 
-export async function maybeRaiseAlert(data: any): Promise<void> {
+export async function maybeRaiseAlert(...args: any[]): Promise<void> {
   try {
-    const userId = data.userId ?? null;
-    const alertType = data.alertType || "security_event";
-    const severity = data.severity || "medium";
-    const description = data.description || "";
+    let userId: number | null = null;
+    let alertType = "security_event";
+    let severity = "medium";
+    let description = "";
+
+    if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+      userId = args[0].userId ?? null;
+      alertType = args[0].alertType || "security_event";
+      severity = args[0].severity || "medium";
+      description = args[0].description || "";
+    } else {
+      userId = typeof args[0] === "number" ? args[0] : null;
+      alertType = args[1] || "security_event";
+      severity = args[2] || "medium";
+      description = args[3] || "";
+    }
 
     await pool.query(
       `INSERT INTO security_alerts (user_id, alert_type, severity, description)
