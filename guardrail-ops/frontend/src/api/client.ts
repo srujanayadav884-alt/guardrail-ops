@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "https://guardrail-ops-1.onrender.com/api").replace(/\/$/, "");
+const API_BASE_URL = "https://guardrail-ops-1.onrender.com/api";
 
 export const api = axios.create({ baseURL: API_BASE_URL });
 
