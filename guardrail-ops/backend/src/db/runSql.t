@@ -1,15 +1,10 @@
-import { Pool } from "pg";
-import { env } from "./env";
+import { pool } from "../config/db";
 
-export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-});
+async function run() {
+  console.log("Connecting to database and applying schema updates...");
 
-async function initDb() {
   try {
-    console.log("Checking and initializing missing database tables...");
-
+    // 1. Ensure security_logs table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS security_logs (
         id SERIAL PRIMARY KEY,
@@ -23,6 +18,7 @@ async function initDb() {
       );
     `);
 
+    // 2. Ensure risk_scores table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS risk_scores (
         id SERIAL PRIMARY KEY,
@@ -35,6 +31,7 @@ async function initDb() {
       );
     `);
 
+    // 3. Ensure security_alerts table exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS security_alerts (
         id SERIAL PRIMARY KEY,
@@ -46,11 +43,12 @@ async function initDb() {
       );
     `);
 
-    console.log("Database schema initialized successfully!");
+    console.log("SCHEMA UPDATE SUCCESSFUL: All security tables are ready!");
   } catch (err) {
-    console.error("Failed to initialize database schema:", err);
+    console.error("SCHEMA UPDATE ERROR:", err);
+  } finally {
+    await pool.end();
   }
 }
 
-// Auto-run schema initialization on app start
-initDb();
+run();
