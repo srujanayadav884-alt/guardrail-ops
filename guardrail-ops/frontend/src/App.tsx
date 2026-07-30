@@ -2,13 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-// Auth Pages
-import { Login } from "./pages/auth/Login";
-import { AdminLogin } from "./pages/auth/AdminLogin";
+// Auth Pages (Default Imports)
+import Login from "./pages/auth/Login";
+import AdminLogin from "./pages/auth/AdminLogin";
 
-// Protected Pages (Adjust import paths to match your folder structure if needed)
-import { Dashboard } from "./pages/user/Dashboard";
-import { AdminDashboard } from "./pages/admin/AdminDashboard";
+// Protected Pages (Default Imports)
+import Dashboard from "./pages/admin/Dashboard";
 
 export default function App() {
   return (
@@ -25,7 +24,7 @@ export default function App() {
 
         {/* Protected Admin Routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
         </Route>
 
         {/* Default Redirects */}

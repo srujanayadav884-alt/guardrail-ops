@@ -38,10 +38,10 @@ export default function BankingAssistant() {
       await streamChat(
         { message: userMsg.message, sessionId },
         {
-          onToken: (token) => {
+          onToken: (token: string) => {
             updateLastAssistantMessage((msg) => ({ ...msg, message: msg.message + token }));
           },
-          onBlocked: (data) => {
+          onBlocked: (data: { reply: string; riskBand?: string }) => {
             updateLastAssistantMessage(() => ({
               role: "assistant",
               message: data.reply,
@@ -49,15 +49,15 @@ export default function BankingAssistant() {
               riskBand: data.riskBand,
             }));
           },
-          onCorrection: (data) => {
+          onCorrection: (data: { reply: string }) => {
             // The AI response contained PII that was masked after streaming finished —
             // swap the accumulated text for the validated/masked version.
             updateLastAssistantMessage((msg) => ({ ...msg, message: data.reply }));
           },
-          onDone: (data) => {
+          onDone: (data: { riskBand?: string }) => {
             updateLastAssistantMessage((msg) => ({ ...msg, riskBand: data.riskBand }));
           },
-          onError: (data) => {
+          onError: (data: { reply: string }) => {
             updateLastAssistantMessage(() => ({ role: "assistant", message: data.reply }));
           },
         }
