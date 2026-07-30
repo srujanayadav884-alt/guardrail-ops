@@ -1,56 +1,101 @@
-import { useEffect, useState } from "react";
-import { api } from "../../api/client";
-import { SecurityLog } from "../../types";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function AuditLogs() {
-  const [logs, setLogs] = useState<SecurityLog[]>([]);
+export function AdminLogin() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    api
-      .get("/admin/audit-logs")
-      .then((res) => setLogs(res.data))
-      .catch(() => setError("Could not load audit logs. Please refresh and try again."));
-  }, []);
+  const { adminLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      // 1. Wait for token & user to be stored in localStorage and context
+      await adminLogin(email, password);
+
+      // 2. Navigate via React Router WITHOUT hard-reloading the page
+      navigate("/admin/dashboard", { replace: true });
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Invalid credentials or internal server error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-guard-navy">Audit Logs</h1>
-      {error && <p className="mb-3 text-sm text-guard-alert">{error}</p>}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-guard-slate">
-            <tr>
-              <th className="px-4 py-3">Time</th>
-              <th className="px-4 py-3">Event</th>
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Risk Score</th>
-              <th className="px-4 py-3">User ID</th>
-              <th className="px-4 py-3">IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-guard-slate">
-                  No security events recorded yet.
-                </td>
-              </tr>
-            )}
-            {logs.map((l) => (
-              <tr key={l.id} className="border-t border-slate-100">
-                <td className="px-4 py-3">{new Date(l.created_at).toLocaleString()}</td>
-                <td className="px-4 py-3">{l.event_type}</td>
-                <td className="px-4 py-3 capitalize">{l.severity}</td>
-                <td className="px-4 py-3">
-                  {typeof l.details?.riskScore === "number" ? l.details.riskScore : "—"}
-                </td>
-                <td className="px-4 py-3">{l.user_id ?? "—"}</td>
-                <td className="px-4 py-3">{l.ip_address ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="min-h-screen bg-[#0d192b] flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8">
+        <div className="mb-6 text-left">
+          <span className="text-xs font-semibold tracking-wider text-teal-500 uppercase">
+            GUARDRAIL-OPS
+          </span>
+          <h1 className="text-2xl font-bold text-slate-800 mt-1">
+            Admin / Security Console
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Restricted to authorized GuardBank staff.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 text-sm text-red-500 bg-red-50 p-2 rounded border border-red-200">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Admin email
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@guardbank.com"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-[#0d192b] hover:bg-slate-800 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 disabled:opacity-50 mt-2"
+          >
+            {isSubmitting ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <Link
+            to="/login"
+            className="text-sm text-slate-600 hover:text-slate-800 underline"
+          >
+            Back to customer sign in
+          </Link>
+        </div>
       </div>
     </div>
   );

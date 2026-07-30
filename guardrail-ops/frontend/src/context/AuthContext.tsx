@@ -14,15 +14,33 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const stored = localStorage.getItem("guardrail_user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem("guardrail_user");
-    if (stored) {
-      setUser(JSON.parse(stored));
+    const token = localStorage.getItem("guardrail_token");
+    const storedUser = localStorage.getItem("guardrail_user");
+
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser));
+      // Optionally verify token with backend
+      api.get("/auth/me")
+        .then((res) => {
+          if (res.data.user) {
+            setUser(res.data.user);
+            localStorage.setItem("guardrail_user", JSON.stringify(res.data.user));
+          }
+        })
+        .catch(() => {
+          // Only clear if the token itself is invalid
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   function persist(token: string, user: AuthUser) {
@@ -54,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, adminLogin, register, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
